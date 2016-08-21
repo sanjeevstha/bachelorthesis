@@ -1,0 +1,48 @@
+import java.io.*;
+import java.util.*;
+
+class FileInputDemo 
+{
+    public static void main(String args[])
+	{
+     	Thread th=new Thread();
+          try
+			{
+	           	FileInputStream fstream = new FileInputStream("./Data/Test.txt");
+			//Scanner inputFile = new Scanner(fstream);
+			DataInputStream in = new DataInputStream(fstream);
+			String s=new String();
+            while (true)
+				{
+				th.sleep(1000);
+				/*if(inputFile.hasNext())
+					{
+					s=in.readLine(1);
+					System.out.println(s);	
+					}*/
+				//if(in.nextLine())
+				//{	
+				s=in.readLine();
+				//System.out.println(s);
+				//}
+				/*if(s.equals("")
+					{
+					
+					}
+				*/
+				//System.out.println (in.readLine());
+				}
+				
+				//in.close();
+			} 
+                        catch (Exception e)
+			{
+				System.err.println("File input error");
+			}
+		//}
+               // else
+                 //  System.out.println("Invalid parameters");
+	}
+
+}
+

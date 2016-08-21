@@ -1,0 +1,5 @@
+#!/bin/sh
+
+echo "this is a test";
+
+./ACEMSERVER -p Data

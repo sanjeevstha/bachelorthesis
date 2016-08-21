@@ -1,0 +1,312 @@
+/* 
+ *   ACEM INFO ENQUIRY via SMS- ACEMINFO.cpp
+ *
+ *   Copyright -  Raju Bhai Shrestha(ra_raj_raju@hotmail.com)
+ *		Sanjeev Shrestha(stha_san2@hotmail.com)
+ *		Saugat Kc(saugat_2001@hotmail.com)
+ *		Prarthana Bataju(prarthana_bataju@hotmail.com) *
+*/
+
+/***************************************************************************
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ ***************************************************************************/
+
+
+// ACEMINFO ENQUIRY via SMS Class
+ 
+
+#include <stdlib.h>
+#include <iostream>
+#include <fstream>
+#include <stdarg.h>
+
+#include <errno.h>
+#include <signal.h>
+#include <unistd.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <dirent.h>
+
+// serial comm
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <resolv.h>
+#include <netdb.h>
+#include <sys/socket.h>
+
+// bluetooth related
+#include <bluetooth/bluetooth.h>
+#include <bluetooth/rfcomm.h>
+
+//#include "SmsVotingServer.h" 
+#include "ACEMINFO.cpp"
+#include "ACEMINFO.h"
+#include "SmsParser.h"
+
+using namespace std;
+
+bdaddr_t bdaddr;
+
+// constructor
+CACEMINFO::CACEMINFO(){
+
+}
+
+CACEMINFO::~CACEMINFO(){
+	close(iCommHandle);
+	close(socket1);
+
+	char tmpstring[50];
+//	sprintf(tmpstring, "sdptool del 0x10000");
+//	system(tmpstring);
+}
+
+bool CACEMINFO::Initialize(char * path, bool daemonize){
+	//Log("Welcome to Ad Hoc SMS Voting Server\r\n");
+	//Log("Copyright Jwalanta Shrestha and Shishir Jha 2006\r\n");
+	  Log("ACEM INFO ENQUIRY");
+	socket1=BluetoothConnectToSocket(channel);
+
+	if (daemonize){
+		Log("daemonizing\n");
+		if (daemon(1, 1) < 0){
+			perror("daemon");
+			exit(1);
+		}
+		fclose (stdout);
+	}
+	
+	parser.SetPath(path);
+
+	while(1){
+		iCommHandle=BluetoothWaitforConnect(socket1);
+		HandleBluetooth();
+	}
+	return true;  
+}
+
+void CACEMINFO::HandleBluetooth(){
+	iExitNow = false;
+	do {
+		ReadBluetoothCommand();
+	} while (!iExitNow);
+	close(iCommHandle);
+}
+
+bool CACEMINFO::WriteFile(int handle,unsigned char* buffer,int maxbytes, long unsigned int* byteswritten,int flag){
+	long unsigned int b;
+	int br;
+	br=write(handle,(void*)buffer,maxbytes);
+	if (br==-1) {
+		return false;
+	}
+	else {
+		b=(long unsigned int)(br);
+		*(byteswritten)=b;
+		return true;
+	}
+}
+
+
+bool CACEMINFO::WriteFile(int handle, char* buffer,int maxbytes, long unsigned int* byteswritten,int flag){
+	long unsigned int b;
+	int br;
+	
+	br=write(handle,(void*)buffer,maxbytes);
+	if (br==-1) {
+		return false;
+	}
+	else {
+		b=(long unsigned int)(br);
+		*(byteswritten)=b;
+		return true;
+	}
+}
+
+bool CACEMINFO::ReadFile(int handle,unsigned char* buffer,int maxbytes,long unsigned int* bytesread,int flag){
+	long unsigned int b;
+	int br;
+	br=recv(handle, (void*)buffer, maxbytes,flag);
+	if (br<=0) {
+		return false;
+	}
+	else {
+		b=(long unsigned int)(br);
+		*(bytesread)=b;
+		return true;
+	}
+}
+
+
+bool CACEMINFO::ReadFile(int handle,char* buffer,int maxbytes,long unsigned int* bytesread,int flag){
+	long unsigned int b;
+	int br;
+	br=recv(handle, (void*)buffer, maxbytes,flag);
+	if (br<=0) {
+		return false;
+	}
+	else {
+		b=(long unsigned int)(br);
+		*(bytesread)=b;
+		return true;
+	}
+}
+
+void CACEMINFO::ReadBluetoothCommand(){
+	char buffer[1024];
+	unsigned long bytes_read = 0;
+	int parseret;
+	
+
+	memset(buffer, 0, 1024);
+	if (!ReadFile(iCommHandle, buffer, 1024, &bytes_read, 0)){
+		Log("%s\r\n", GetLastError());
+		iExitNow = true;
+	}
+	else{
+
+//	cout << "String Received: \n" << buffer << " (" << bytes_read << " bytes)" <<endl; // << endl;
+	cout << "String Received: " << "(" << bytes_read << " bytes), "; // << endl;
+	
+	// string received from client
+
+	// process it here..
+	
+	parseret=parser.ParseMessage(buffer, batostr(&curr_ba));
+//	cout << "Return value: " << parseret << endl;
+	
+	switch (parseret){
+		case -1: // message has past
+			// stop
+			strcpy(buffer, "ACKSTP\0");
+			cout << "Message past beyond starting date of all running profiles" << endl;
+			break;
+		case 0: // invalid
+			// send another sms
+			strcpy(buffer, "ACKNXT\0");
+			cout << "Invalid Message" << endl;
+			break;
+		case 1: // valid
+			// delete the sms n send another one
+			cout << "Valid Message" << endl;
+			strcpy(buffer, "ACKDEL\0");
+			break;
+		case 2: // valid but date > expiry date
+			// del and send another
+			cout << "Valid Message, but date > expiry date" << endl;			
+			strcpy(buffer, "ACKDEL\0");
+			break;
+		case 3: // valid but date < start date
+			// stop
+			cout << "Valid Message, but date < start date" << endl;			
+			strcpy(buffer, "ACKSTP\0");
+			break;
+			
+		default:
+			// don know what to do, send another..
+			strcpy(buffer, "ACKSTP\0");
+			break;
+	}
+	
+
+	
+//	sleep(1);
+
+	WriteFile(iCommHandle, buffer, (7), &bytes_read, 0);
+	
+	//cout << "Ack Written" << endl;
+	
+	}
+}
+
+
+int CACEMINFO::BluetoothConnectToSocket(int channel){
+	int s=0;
+
+	struct sockaddr_rc loc_addr;
+	struct sockaddr_in iploc_addr;
+
+	int pf;
+	int proto;
+
+	pf=PF_BLUETOOTH;
+	proto=BTPROTO_RFCOMM;
+
+	if( (s = socket(pf, SOCK_STREAM, proto)) < 0 ) {
+		Log("Can't create socket. %s\r\n", strerror(errno));
+		exit(1);
+	}
+
+	loc_addr.rc_family = AF_BLUETOOTH;
+	loc_addr.rc_bdaddr = bdaddr;
+	loc_addr.rc_channel = uint8_t(channel);
+
+	char tmpstring[50];
+	sprintf(tmpstring, "sdptool add --channel=%i SP", channel);
+	system(tmpstring);
+	Log("Registered SP for channel %i\r\n", channel);
+
+	struct sockaddr* socketaddr=(struct sockaddr *)&loc_addr;
+
+	if( bind(s, socketaddr, sizeof(*socketaddr)) < 0 ) {
+		Log("Can't bind socket. %s, %f\r\n", strerror(errno),float(s));
+		exit(1);
+	 }
+
+	if( listen(s, 10) ) {
+		Log("Can not listen on the socket. %s\r\n", strerror(errno));
+		exit(1);
+	}
+
+	return s;
+
+}
+
+
+int CACEMINFO::BluetoothWaitforConnect(int s){
+	int s1=0,opt;
+
+	bdaddr_t ba;
+	struct sockaddr_rc rem_addr;
+
+	struct sockaddr_in iprem_addr;
+
+	Log("\r\nWaiting for connection over bluetooth...\r\n");
+
+	struct sockaddr* socketaddr=(struct sockaddr *)&rem_addr;
+
+	opt = sizeof(rem_addr);
+	if( (s1 = accept(s, socketaddr, (socklen_t *)&opt)) < 0 ){
+		Log("Accept failed. %s\r\n", strerror(errno));
+		exit(1);
+	}
+
+	baswap(&ba, &rem_addr.rc_bdaddr);
+	Log("Connect from %s\r\n", batostr(&ba));
+	
+	curr_ba = ba; // for future use
+
+	return s1;
+}
+
+
+char* CACEMINFO::GetLastError(){
+  return strerror(errno);
+}
+
+	
+void CACEMINFO::Log(char* aFormatString, ...){
+	char logBuffer[1024];
+	va_list argList;
+	va_start(argList, aFormatString);
+	vsprintf(logBuffer, aFormatString, argList);
+	va_end(argList);
+	cout << logBuffer;
+}	
+

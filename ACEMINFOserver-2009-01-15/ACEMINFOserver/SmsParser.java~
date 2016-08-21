@@ -1,0 +1,33 @@
+import java.lang.*;
+
+
+
+public class SmsParser
+{
+	public SmsParser(String sms)
+	{
+	int msg_len=sms.length();
+	String sms_date=sms.substring(0,8);
+	String sms_number=sms.substring(15,29);
+	String sms_msg=sms.substring(30,msg_len);
+	String code=sms_msg.substring(0,3);
+	
+	
+	if(code.equalsIgnoreCase("Acc"))
+		{
+		//System.out.println("Entered");
+		new AccountInfo(sms_date,sms_number,sms_msg);
+		}
+	else if(code.equalsIgnoreCase("Res"))
+		{
+		new ResultInfo(sms_date,sms_number,sms_msg);
+		}
+	else
+		new writeAccount(date,number,"Sorry code Error!! No such code exists.");
+	
+	/*System.out.println(sms_date);
+	System.out.println(sms_number);
+	System.out.println(sms_msg);*/
+	}
+
+}

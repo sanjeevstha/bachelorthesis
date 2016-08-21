@@ -1,0 +1,89 @@
+/* 
+ *   ACEM INFO ENQUIRY via SMS- ACEMINFO.h
+ *
+ *   Copyright -  Raju Bhai Shrestha(ra_raj_raju@hotmail.com)
+ *		Sanjeev Shrestha(stha_san2@hotmail.com)
+ *		Saugat Kc(saugat_2001@hotmail.com)
+ *		Prarthana Bataju(prarthana_bataju@hotmail.com) *
+*/
+
+/***************************************************************************
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ ***************************************************************************/
+
+
+// ACEMINFO ENQUIRY via SMS Class
+ 
+
+#include <stdlib.h>
+#include <iostream>
+#include <fstream>
+#include <string.h>
+
+
+#include "ACEMINFOServer.h"
+
+#define VERSION "1.0"
+
+using namespace std;
+
+void show_usage(void){
+	cout << endl;
+	cout<< "ACEMINFO ENQUIRY via SMS" <<endl << endl;
+	cout << "usage: svserver -p path_to_data_folder" << endl << endl;
+//	cout << "   -d  daemonize" << endl;
+}
+
+
+int main(int argc, char **argv){
+  CACEMINFOServer svs;
+  bool daemonize = false;
+  int c;
+  
+  char pth[1024]="";
+
+  for (;;){
+    c = getopt( argc, argv, "hdp:");
+    if (c == EOF) break;
+    switch (c){
+      case 'd': // demonize
+        daemonize = 1;
+        break;
+      case 'p':
+      	if (optarg){
+      		strcpy(pth, optarg);
+      	}
+		else show_usage();
+      	break;
+      case 'h': // help
+      default:
+        show_usage();
+        exit(1);
+    }
+  }
+  
+
+  if (!strlen(pth)){
+  	show_usage();
+
+  	cout << "Please enter path" << endl;
+  	return EXIT_FAILURE;
+  }
+  
+	// check for path validity
+	char tmpstr[1024];
+	
+	strcpy(tmpstr, pth);
+  
+  
+  svs.Initialize(pth, daemonize);
+  return EXIT_SUCCESS;
+}
+
+
+ 

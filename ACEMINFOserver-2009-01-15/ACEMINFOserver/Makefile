@@ -1,0 +1,13 @@
+SHELL = /bin/sh
+LIB = -lbluetooth
+
+svserver: 	main.cpp ACEMINFOServer.cpp SmsParser.cpp
+			$(CXX) -o svserver $(LIB) main.cpp ACEMINFOServer.cpp SmsParser.cpp
+			
+
+install:	svserver
+			cp -u ./svserver /usr/bin/svserver
+
+
+
+				 

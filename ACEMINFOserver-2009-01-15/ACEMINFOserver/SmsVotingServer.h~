@@ -1,0 +1,68 @@
+/* 
+ *   Ad Hoc SMS Voting Server - SmsVotingServer.h
+ *
+ *   Copyright - Jwalanta Shrestha (jwalanta@gmail.com) 
+ *               Shishir Jha (shishir_jh@hotmail.com)
+ *
+*/
+
+/***************************************************************************
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ ***************************************************************************/
+ 
+
+// bluetooth related
+#include <bluetooth/bluetooth.h>
+#include <bluetooth/rfcomm.h>
+#include "SmsParser.h"
+
+#ifndef __SMSVOTINGSERVER_H__
+#define __SMSVOTINGSERVER_H__
+
+// Ad Hoc SMS Voting Server Class
+ 
+class CSmsVotingServer{
+	
+	// Construction
+	
+public:
+	CSmsVotingServer();	// standard constructor
+	~CSmsVotingServer();
+	bool Initialize(char * path, bool daemonize = false);
+
+	// Implementation
+
+private:
+	int BluetoothConnectToSocket(int Channel);
+	int BluetoothWaitforConnect(int s);
+	void ReadBluetoothCommand();
+	void HandleBluetooth();
+
+	bool ReadFile(int handle,char* buffer,int maxbytes,long unsigned int* bytesread,int flag);
+	bool ReadFile(int handle,unsigned char* buffer,int maxbytes,long unsigned int* bytesread,int flag);
+	bool WriteFile(int handle, char* buffer,int maxbytes, long unsigned int* byteswritten,int flag);
+	bool WriteFile(int handle,unsigned char* buffer,int maxbytes, long unsigned int* byteswritten,int flag);
+	char* GetLastError();
+
+	void Log(char* aFormatString, ...);
+
+	int iCommHandle;
+	bool iExitNow;
+	bool iStopEnd;
+	bool iStopNow;
+
+	int startAutomatically;
+	int socket1;
+	int channel;
+	
+	bdaddr_t curr_ba; // current bluetooth address
+	CSmsParser parser;
+};
+
+
+#endif // __SMSVOTINGSERVER_H__
